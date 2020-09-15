@@ -1672,9 +1672,6 @@ page.includeCSS.femanangerBootstrap.external = 1
 [end]
 
 page {
-	includeCSS {
-		femanagerMain = EXT:femanager/Resources/Public/Css/Main.min.css
-	}
 	includeJSFooter {
 		femanagerValidation = EXT:femanager/Resources/Public/JavaScript/Validation.min.js
 		femanager = EXT:femanager/Resources/Public/JavaScript/Femanager.min.js
