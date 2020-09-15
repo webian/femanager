@@ -1,4 +1,4 @@
-<f:layout name="Email" />
+<f:layout name="FrontendEmail" />
 
 	Email / CreateUserConfirmation
 
@@ -8,25 +8,54 @@
 	Available variables:
 		{user} User Object
 		{hash} Hash to ensure authentication of link
-
-<f:section name="main">
-	<p><f:translate key="emailCreateUserConfirmationSalutation" /> {user.username},</p>
+<f:section name="Title"><f:translate key="emailCreateUserConfirmationSubject" extensionName="femanager" /></f:section>
+<f:section name="Main">
+	<f:if condition="{user.firstName}">
+		<f:then>
+			{f:variable(name: 'user_name', value: '{user.firstName}')}
+		</f:then>
+		<f:else>
+			<f:if condition="{user.username}">
+				<f:then>
+					{f:variable(name: 'user_name', value: '{user.username}')}
+				</f:then>
+				<f:else>
+					{f:variable(name: 'user_name', value: '{user.email}')}
+				</f:else>
+			</f:if>
+		</f:else>
+	</f:if>
+	<p><f:translate key="emailCreateUserConfirmationSalutation" extensionName="femanager" /> {user_name},</p>
 
 	<p>
-		<f:translate key="emailCreateUserConfirmationText1" />
+		<f:translate key="emailCreateUserConfirmationText1" extensionName="femanager" />
 		<br>
-		<f:link.action action="confirmCreateRequest" controller="New" absolute="1" arguments="{user:user, hash:hash, status:'userConfirmation'}">
-			<f:translate key="emailCreateUserConfirmationLinkConfirm" />
+		<f:link.action
+				class="btn btn-primary"
+				action="confirmCreateRequest"
+				controller="New"
+				pluginName="Pi1"
+				extensionName="Femanager"
+				absolute="1"
+				arguments="{user:user, hash:hash, status:'userConfirmation'}">
+			<f:translate key="emailCreateUserConfirmationLinkConfirm" extensionName="femanager" />
 		</f:link.action>
 	</p>
 
 	<p>
-		<f:translate key="emailCreateUserConfirmationText2" />
+		<f:translate key="emailCreateUserConfirmationText2" extensionName="femanager" />
 		<br>
-		<f:link.action action="confirmCreateRequest" controller="New" absolute="1" arguments="{user:user, hash:hash, status:'userConfirmationRefused'}">
-			<f:translate key="emailCreateUserConfirmationLinkConfirmRefused" />
+		<f:link.action
+				class="btn"
+				action="confirmCreateRequest"
+				controller="New"
+				pluginName="Pi1"
+				extensionName="Femanager"
+				absolute="1"
+				arguments="{user:user, hash:hash, status:'userConfirmationRefused'}">
+			<f:translate key="emailCreateUserConfirmationLinkConfirmRefused" extensionName="femanager" />
 		</f:link.action>
 	</p>
 
-	<p><f:translate key="emailCreateUserConfirmationSignature" /></p>
+	<p><f:translate key="emailCreateUserConfirmationSignature" extensionName="femanager" /><br>{f:cObject(typoscriptObjectPath: 'lib.websiteData.sitename')}</p>
 </f:section>

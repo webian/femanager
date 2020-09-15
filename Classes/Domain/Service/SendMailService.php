@@ -7,11 +7,10 @@ use In2code\Femanager\Event\BeforeMailSendEvent;
 use In2code\Femanager\Utility\ObjectUtility;
 use In2code\Femanager\Utility\TemplateUtility;
 use Psr\EventDispatcher\EventDispatcherInterface;
-use Symfony\Component\Mime\Part\TextPart;
+use Symfony\Component\Mime\Address;
+use TYPO3\CMS\Core\Mail\FluidEmail;
 use TYPO3\CMS\Core\Mail\Mailer;
-use TYPO3\CMS\Core\Mail\MailMessage;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Extbase\Object\ObjectManager;
 
 /**
  * Class SendMailService
@@ -87,7 +86,8 @@ class SendMailService
         }
 
         $this->contentObjectStart($variables);
-        $email = GeneralUtility::makeInstance(MailMessage::class);
+        /** @var FluidEmail $email */
+        $email = GeneralUtility::makeInstance(FluidEmail::class);
         $variables = $this->embedImages($variables, $typoScript, $email);
         $this->prepareMailObject($template, $receiver, $sender, $subject, $variables, $email);
         $this->overwriteEmailReceiver($typoScript, $email);
@@ -98,34 +98,19 @@ class SendMailService
         $this->setAttachments($typoScript, $email);
 
         $this->dispatcher->dispatch(new BeforeMailSendEvent($email, $variables, $this));
-        $email->send();
+        GeneralUtility::makeInstance(Mailer::class)->send($email);
         $this->dispatcher->dispatch(new AfterMailSendEvent($email, $variables, $this));
 
-        return $email->isSent();
-    }
-
-    /**
-     * Generate Email Body
-     *
-     * @param string $template Template file in Templates/Email/
-     * @param array $variables Variables for assignMultiple
-     * @return string
-     */
-    protected function getMailBody($template, $variables)
-    {
-        $standAloneView = TemplateUtility::getDefaultStandAloneView();
-        $standAloneView->setTemplatePathAndFilename($this->getRelativeEmailPathAndFilename($template));
-        $standAloneView->assignMultiple($variables);
-        return $standAloneView->render();
+        return true;
     }
 
     /**
      * @param array $variables
      * @param array $typoScript
-     * @param MailMessage $email
+     * @param FluidEmail $email
      * @return array
      */
-    protected function embedImages(array $variables, array $typoScript, MailMessage $email): array
+    protected function embedImages(array $variables, array $typoScript, FluidEmail $email): array
     {
         if ($this->contentObject->cObjGetSingle($typoScript['embedImage'], $typoScript['embedImage.'])) {
             $images = GeneralUtility::trimExplode(
@@ -148,7 +133,7 @@ class SendMailService
      * @param array $sender
      * @param string $subject
      * @param array $variables
-     * @param MailMessage $email
+     * @param FluidEmail $email
      * @return void
      */
     protected function prepareMailObject(
@@ -157,23 +142,29 @@ class SendMailService
         array $sender,
         string $subject,
         array $variables,
-        MailMessage $email
+        FluidEmail $email
     ) {
-        $body = GeneralUtility::makeInstance(ObjectManager::class)->get(TextPart::class, $this->getMailBody($template, $variables), 'utf-8', 'html');
+        foreach ($receiver as $address => $name) {
+            $email->to(new Address($address, $name));
+        }
+        foreach ($sender as $address => $name) {
+            $email->from(new Address($address, $name));
+        }
+
         $email
-            ->setTo($receiver)
-            ->setFrom($sender)
-            ->setSubject($subject)
-            ->setBody($body)
-            ->html($body);
+            ->subject($subject)
+            ->setTemplate($template)
+            ->format('html')
+            ->html('')// only HTML mail
+            ->assignMultiple($variables);
     }
 
     /**
      * @param array $typoScript
-     * @param MailMessage $email
+     * @param FluidEmail $email
      * @return void
      */
-    protected function overwriteEmailReceiver(array $typoScript, MailMessage $email)
+    protected function overwriteEmailReceiver(array $typoScript, FluidEmail $email)
     {
         if ($this->contentObject->cObjGetSingle($typoScript['receiver.']['email'], $typoScript['receiver.']['email.'])
             && $this->contentObject->cObjGetSingle($typoScript['receiver.']['name'], $typoScript['receiver.']['name.'])
@@ -186,16 +177,16 @@ class SendMailService
                 $typoScript['receiver.']['name'],
                 $typoScript['receiver.']['name.']
             );
-            $email->setTo([$emailAddress => $name]);
+            $email->to(new Address($emailAddress, $name));
         }
     }
 
     /**
      * @param array $typoScript
-     * @param MailMessage $email
+     * @param FluidEmail $email
      * @return void
      */
-    protected function overwriteEmailSender(array $typoScript, MailMessage $email)
+    protected function overwriteEmailSender(array $typoScript, FluidEmail $email)
     {
         if ($this->contentObject->cObjGetSingle($typoScript['sender.']['email'], $typoScript['sender.']['email.']) &&
             $this->contentObject->cObjGetSingle($typoScript['sender.']['name'], $typoScript['sender.']['name.'])
@@ -208,52 +199,56 @@ class SendMailService
                 $typoScript['sender.']['name'],
                 $typoScript['sender.']['name.']
             );
-            $email->setFrom([$emailAddress => $name]);
+            $email->from(new Address($emailAddress, $name));
         }
     }
 
     /**
      * @param array $typoScript
-     * @param MailMessage $email
+     * @param FluidEmail $email
      * @return void
      */
-    protected function setSubject(array $typoScript, MailMessage $email)
+    protected function setSubject(array $typoScript, FluidEmail $email)
     {
         if ($this->contentObject->cObjGetSingle($typoScript['subject'], $typoScript['subject.'])) {
-            $email->setSubject($this->contentObject->cObjGetSingle($typoScript['subject'], $typoScript['subject.']));
+            $email->subject($this->contentObject->cObjGetSingle($typoScript['subject'], $typoScript['subject.']));
         }
     }
 
     /**
      * @param array $typoScript
-     * @param MailMessage $email
+     * @param FluidEmail $email
      * @return void
      */
-    protected function setCc(array $typoScript, MailMessage $email)
+    protected function setCc(array $typoScript, FluidEmail $email)
     {
         if ($this->contentObject->cObjGetSingle($typoScript['cc'], $typoScript['cc.'])) {
-            $email->setCc($this->contentObject->cObjGetSingle($typoScript['cc'], $typoScript['cc.']));
+            $email->cc(
+                new Address(
+                    ...[$this->contentObject->cObjGetSingle($typoScript['cc'], $typoScript['cc.'])]
+                )
+            );
         }
     }
 
     /**
      * @param array $typoScript
-     * @param MailMessage $email
+     * @param FluidEmail $email
      * @return void
      */
-    protected function setPriority(array $typoScript, MailMessage $email)
+    protected function setPriority(array $typoScript, FluidEmail $email)
     {
         if ($this->contentObject->cObjGetSingle($typoScript['priority'], $typoScript['priority.'])) {
-            $email->setPriority($this->contentObject->cObjGetSingle($typoScript['priority'], $typoScript['priority.']));
+            $email->priority((int)$this->contentObject->cObjGetSingle($typoScript['priority'], $typoScript['priority.']));
         }
     }
 
     /**
      * @param array $typoScript
-     * @param MailMessage $email
+     * @param FluidEmail $email
      * @return void
      */
-    protected function setAttachments(array $typoScript, MailMessage $email)
+    protected function setAttachments(array $typoScript, FluidEmail $email)
     {
         if ($this->contentObject->cObjGetSingle($typoScript['attachments'], $typoScript['attachments.'])) {
             $files = GeneralUtility::trimExplode(

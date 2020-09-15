@@ -26,4 +26,8 @@ call_user_func(function () {
 
     $container = \TYPO3\CMS\Core\Utility\GeneralUtility::makeInstance(\TYPO3\CMS\Extbase\Object\Container\Container::class);
     // $container->registerImplementation(\TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapper::class, \In2code\Femanager\Persistence\Generic\Mapper\DataMap::class);
+
+    // view paths for TYPO3 Mail API
+    $GLOBALS['TYPO3_CONF_VARS']['MAIL']['templateRootPaths']['1600154445'] = 'EXT:femanager/Resources/Private/Templates/Email/';
+    $GLOBALS['TYPO3_CONF_VARS']['MAIL']['partialRootPaths']['1600154445'] = 'EXT:femanager/Resources/Private/Partials/Email/';
 });

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace In2code\Femanager\Event;
 
 use In2code\Femanager\Domain\Service\SendMailService;
-use Symfony\Component\Mime\Email;
+use TYPO3\CMS\Core\Mail\FluidEmail;
 
 class BeforeMailSendEvent
 {
     /**
-     * @var Email
+     * @var FluidEmail
      */
     private $email;
     /**
@@ -22,7 +22,7 @@ class BeforeMailSendEvent
      */
     private $service;
 
-    public function __construct(Email $email, array $variables, SendMailService $service)
+    public function __construct(FluidEmail $email, array $variables, SendMailService $service)
     {
         $this->email = $email;
         $this->variables = $variables;
@@ -30,9 +30,9 @@ class BeforeMailSendEvent
     }
 
     /**
-     * @return Email
+     * @return FluidEmail
      */
-    public function getEmail(): Email
+    public function getEmail(): FluidEmail
     {
         return $this->email;
     }
